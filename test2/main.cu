@@ -2,6 +2,10 @@
 #include "device_launch_parameters.h"
 #include <stdio.h>
 
+#include <stdlib.h>
+#include <cstring>
+#include <time.h>
+
 __global__ void hello_cuda()
 {
     printf("Hello Cuda world \n");
@@ -54,6 +58,20 @@ __global__ void uniqe_gid_calculation_2d_2d( int * data)
 		blockIdx.x, blockIdx.y, tid, gid, data[gid]);
 }
 
+__global__ void mem_trs_test(int *input)
+{
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
+	printf("tid : %d , gid : %d, value : %d \n",threadIdx.x,gid,input[gid]);
+
+}
+
+__global__ void mem_trs_test2(int *input,int size )
+{
+    int gid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (gid < size)
+	    printf("tid : %d , gid : %d, value : %d \n",threadIdx.x,gid,input[gid]);
+
+}
 
 int main()
 {
@@ -100,11 +118,49 @@ int main()
 
     block = dim3(2,2);
 	grid = dim3(2,2);
-    printf("---------------------------------------------------- \n"); 
+    printf("----------------------------------------------------\n"); 
 	uniqe_gid_calculation_2d_2d << < grid, block >> > (d_data);
 	cudaDeviceSynchronize();
-    cudaDeviceReset();
 
+
+    printf("----------------------------------------------------\n"); 
+    int size = 150;
+    int byte_size = size*sizeof(int);
+
+    int * h_input; // host varible 
+    h_input = (int *)malloc(byte_size);
+
+    time_t t;
+    srand( (unsigned int ) time(&t));
+    for (int i = 0; i < size ; i++)
+    {
+        h_input[i] = (int) (rand() & 0xff);
+        printf(" %d ,",h_input[i]);
+    }
+
+
+    printf("\n----------------------------------------------------\n"); 
+    int *d_input;
+    cudaMalloc((void **) &d_input,byte_size );
+
+    cudaMemcpy(d_input,h_input,byte_size,cudaMemcpyHostToDevice);
+
+    block = 32;
+    grid = 5;
+
+    mem_trs_test<<<grid,block>>>(d_input);
+    cudaDeviceSynchronize();
+    printf("\n----------------------------------------------------\n");
+    block = 32;
+    grid = 5;
+
+    mem_trs_test2<<<grid,block>>>(d_input,size);
+    cudaDeviceSynchronize();
+
+
+    cudaFree(d_input);
+    free(h_input);
+    cudaDeviceReset();
     return 0;
 }
 
