@@ -182,7 +182,7 @@ int main()
     query_device();
     printf("\n----------------------------------------------------\n");
 
-    size = 1<<4;
+    size = 1<<25;
     int block_size = 128;
 
     cudaError error;
@@ -219,8 +219,63 @@ int main()
 
     int *d_a,*d_b,*d_c;
 
-    cudaMalloc((int ** )&d_a, NB_BYTE);
+    gpuErrChk(cudaMalloc((int ** )&d_a, NB_BYTE));
+    gpuErrChk(cudaMalloc((int ** )&d_b, NB_BYTE));
+    gpuErrChk(cudaMalloc((int ** )&d_c, NB_BYTE));
 
+    block = dim3(block_size);
+
+    grid = dim3((size/block.x)+1);
+
+
+
+    clock_t mem_h2d_start,mem_h2d_end;
+    mem_h2d_start = clock();
+
+    gpuErrChk(cudaMemcpy(d_a,h_a,NB_BYTE,cudaMemcpyHostToDevice));
+    gpuErrChk(cudaMemcpy(d_b,h_b,NB_BYTE,cudaMemcpyHostToDevice));
+
+    mem_h2d_end = clock();
+
+    clock_t gpu_start,gpu_end;
+
+    gpu_start = clock();
+    sum_array_gpu<<<grid,block >>>(d_a,d_b,d_c,size);
+    gpuErrChk(cudaDeviceSynchronize());
+    gpu_end = clock();
+
+    clock_t mem_dtoh_start, mem_dtoh_end;
+	mem_dtoh_start = clock();
+	gpuErrChk(cudaMemcpy(gpu_res, d_c, NB_BYTE, cudaMemcpyDeviceToHost));
+	mem_dtoh_end = clock();
+
+
+    compare_arrays(cpu_res, gpu_res, size);
+
+	printf("CPU sum time : %4.6f \n",
+		(double)((double)(cpu_end - cpu_start) / CLOCKS_PER_SEC));
+
+	printf("GPU kernel execution time sum time : %4.6f \n",
+		(double)((double)(gpu_end - gpu_start) / CLOCKS_PER_SEC));
+
+	printf("Mem transfer host to device : %4.6f \n",
+		(double)((double)(mem_h2d_end - mem_h2d_start) / CLOCKS_PER_SEC));
+
+	printf("Mem transfer device to host : %4.6f \n",
+		(double)((double)(mem_dtoh_end - mem_dtoh_start) / CLOCKS_PER_SEC));
+
+	printf("Total GPU time : %4.6f \n",
+		(double)((double)((mem_h2d_end - mem_h2d_start)
+			+ (gpu_end - gpu_start)
+			+ (mem_dtoh_end - mem_dtoh_start)) / CLOCKS_PER_SEC));
+
+	gpuErrChk(cudaFree(d_a));
+	gpuErrChk(cudaFree(d_b));
+	gpuErrChk(cudaFree(d_c));
+
+	free(h_a);
+	free(h_b);
+	free(gpu_res);
 
     return 0;
 }

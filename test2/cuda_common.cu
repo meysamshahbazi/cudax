@@ -46,3 +46,15 @@ void query_device()
 }
 
 
+void compare_arrays (int* gpu, int* cpu, int size){
+    for ( int i = 0; i < size ; i++){
+        if(gpu[i]!= cpu[i]){
+
+            printf("Arrays are different \n");
+            return;
+        }
+    }
+    printf("Arrays are same \n");
+}
+
+
