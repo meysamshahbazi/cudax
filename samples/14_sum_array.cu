@@ -11,7 +11,7 @@
 //for memset
 #include <cstring>
 
-#include "common.h"
+// #include "common.h"
 
 __global__ void sum_arrays_gpu(int * a, int * b, int* c, int size)
 {

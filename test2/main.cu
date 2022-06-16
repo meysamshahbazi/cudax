@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <cstring>
 #include <time.h>
+#include "cuda_common.cuh"
 
 __global__ void hello_cuda()
 {
@@ -73,50 +74,21 @@ __global__ void mem_trs_test2(int *input,int size )
 
 }
 
-void query_device()
+__global__ void sum_array_gpu( int *a,int *b, int *c, int size)
 {
-	int deviceCount = 0;   
-	cudaGetDeviceCount(&deviceCount);
+    int index = blockDim.x*blockIdx.x + threadIdx.x;
 
-	if (deviceCount == 0)
-	{
-		printf("No CUDA support device found");
-	}
-
-	int devNo = 0;
-	cudaDeviceProp iProp; 
-	cudaGetDeviceProperties(&iProp, devNo);
-
-	printf("Device %d: %s\n", devNo, iProp.name);
-	printf("  Number of multiprocessors:                     %d\n",
-		iProp.multiProcessorCount);
-	printf("  clock rate :                     %d\n",
-		iProp.clockRate);
-	printf("  Compute capability       :                     %d.%d\n",
-		iProp.major, iProp.minor);
-	printf("  Total amount of global memory:                 %4.2f KB\n",
-		iProp.totalGlobalMem / 1024.0);
-	printf("  Total amount of constant memory:               %4.2f KB\n",
-		iProp.totalConstMem / 1024.0);
-	printf("  Total amount of shared memory per block:       %4.2f KB\n",
-		iProp.sharedMemPerBlock / 1024.0);
-	printf("  Total amount of shared memory per MP:          %4.2f KB\n",
-		iProp.sharedMemPerMultiprocessor / 1024.0);
-	printf("  Total number of registers available per block: %d\n",
-		iProp.regsPerBlock);
-	printf("  Warp size:                                     %d\n",
-		iProp.warpSize);
-	printf("  Maximum number of threads per block:           %d\n",
-		iProp.maxThreadsPerBlock);
-	printf("  Maximum number of threads per multiprocessor:  %d\n",
-		iProp.maxThreadsPerMultiProcessor);
-	printf("  Maximum number of warps per multiprocessor:    %d\n",
-		iProp.maxThreadsPerMultiProcessor / 32);
-	printf("  Maximum Grid size                         :    (%d,%d,%d)\n",
-		iProp.maxGridSize[0], iProp.maxGridSize[1], iProp.maxGridSize[2]);
-	printf("  Maximum block dimension                   :    (%d,%d,%d)\n",
-		iProp.maxThreadsDim[0], iProp.maxThreadsDim[1], iProp.maxThreadsDim[2]);
+    if (index < size)
+        c[index] = a[index] + b[index];
 }
+
+void sum_array_cpu( int *a,int *b, int *c, int size)
+{
+    for (int i =0; i <size;i++)
+        c[i] = a[i]+b[i];
+}
+
+
 
 
 int main()
@@ -208,6 +180,48 @@ int main()
     free(h_input);
     cudaDeviceReset();
     query_device();
+    printf("\n----------------------------------------------------\n");
+
+    size = 1<<4;
+    int block_size = 128;
+
+    cudaError error;
+
+    size_t NB_BYTE = size*sizeof(int);
+
+    int *h_a,*h_b,*gpu_res,*cpu_res;
+
+    h_a = (int *) malloc(NB_BYTE);
+    h_b = (int *) malloc(NB_BYTE);
+    gpu_res = (int *) malloc(NB_BYTE);
+    cpu_res = (int *) malloc(NB_BYTE);
+
+    // time_t t;
+    srand((unsigned)time(&t));
+
+    for(size_t i =0;i<size;i++)
+    {
+        h_a[i] = (int)(rand() &0xFF);
+        // h_a[i] = 1;
+
+        h_b[i] = (int)(rand() &0xFF);
+        // h_b[i] = 2;
+        // printf("%d , %d \n",h_a[i],h_b[i]);
+    }
+
+    memset(cpu_res,0,NB_BYTE);
+    memset(gpu_res,0,NB_BYTE);
+
+    clock_t cpu_start, cpu_end;
+    cpu_start = clock();
+    sum_array_cpu(h_a, h_b,cpu_res,size);
+    cpu_end = clock();
+
+    int *d_a,*d_b,*d_c;
+
+    cudaMalloc((int ** )&d_a, NB_BYTE);
+
+
     return 0;
 }
 

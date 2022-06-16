@@ -24,7 +24,7 @@ set(CUDA_NVCC_FLAGS
 
 SET(GCC_COVERAGE_COMPILE_FLAGS "-std=c++14 -Wunused-function")
 SET( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
-cuda_add_executable( test1 main.cu)
+cuda_add_executable( test1 main.cu cuda_common.cu)
 
 # SET( CUFFT_LIB /usr/local/cuda/lib64/libcufft.so.8.0)
 
