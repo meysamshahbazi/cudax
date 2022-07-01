@@ -88,8 +88,18 @@ void sum_array_cpu( int *a,int *b, int *c, int size)
         c[i] = a[i]+b[i];
 }
 
+__global__ void print_details_of_warps()
+{
+	int gid = blockIdx.y * gridDim.x * blockDim.x 
+		+ blockIdx.x * blockDim.x + threadIdx.x;
 
+	int warp_id = threadIdx.x / 32;
 
+	int gbid = blockIdx.y * gridDim.x + blockIdx.x;
+
+	printf("tid : %d, bid.x : %d, bid.y : %d, gid : %d, warp_id : %d, gbid : %d \n",
+		threadIdx.x, blockIdx.x, blockIdx.y, gid, warp_id, gbid);
+}
 
 int main()
 {
@@ -182,7 +192,7 @@ int main()
     query_device();
     printf("\n----------------------------------------------------\n");
 
-    size = 1<<25;
+    size = 1<<4;
     int block_size = 128;
 
     cudaError error;
@@ -276,6 +286,17 @@ int main()
 	free(h_a);
 	free(h_b);
 	free(gpu_res);
+
+    printf("\n----------------------------------------------------\n");
+
+    // warp 
+    dim3 block_sz(42);
+	dim3 grid_size(2,2);
+
+	print_details_of_warps << <grid_size,block_sz >> > ();
+	cudaDeviceSynchronize();
+
+	cudaDeviceReset();
 
     return 0;
 }
